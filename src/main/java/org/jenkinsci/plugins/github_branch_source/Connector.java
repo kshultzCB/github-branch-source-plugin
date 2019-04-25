@@ -35,10 +35,10 @@ import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
-import com.squareup.okhttp.Cache;
-import com.squareup.okhttp.CacheControl;
-import com.squareup.okhttp.OkHttpClient;
-import com.squareup.okhttp.OkUrlFactory;
+import okhttp3.Cache;
+import okhttp3.CacheControl;
+import okhttp3.OkHttpClient;
+import okhttp3.OkUrlFactory;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.AbortException;
 import hudson.Extension;
@@ -86,6 +86,7 @@ import org.kohsuke.github.GitHubBuilder;
 import org.kohsuke.github.HttpConnector;
 import org.kohsuke.github.RateLimitHandler;
 import org.kohsuke.github.extras.OkHttpConnector;
+import org.jenkinsci.plugins.github_branch_source.OkHttp3Connector;
 
 import static java.util.logging.Level.FINE;
 
@@ -110,6 +111,8 @@ public class Connector {
     private static final double MILLIS_PER_HOUR = TimeUnit.HOURS.toMillis(1);
     private static final Random ENTROPY = new Random();
     private static final String SALT = Long.toHexString(ENTROPY.nextLong());
+    private static final OkHttpClient baseClient = new OkHttpClient();
+
 
     private Connector() {
         throw new IllegalAccessError("Utility class");
@@ -370,7 +373,8 @@ public class Connector {
             gb.withEndpoint(apiUrl);
             gb.withRateLimitHandler(CUSTOMIZED);
 
-            OkHttpClient client = new OkHttpClient().setProxy(getProxy(host));
+            OkHttpClient.Builder clientBuilder = baseClient.newBuilder();
+            clientBuilder.proxy(getProxy(host));
 
             int cacheSize = GitHubSCMSource.getCacheSize();
             if (cacheSize > 0) {
@@ -392,14 +396,16 @@ public class Connector {
                 }
                 if (cacheDir != null) {
                     Cache cache = new Cache(cacheDir, cacheSize * 1024L * 1024L);
-                    client.setCache(cache);
+                    clientBuilder.cache(cache);
                 }
             }
 
-            if (client.getCache() != null) {
+            OkHttpClient client = clientBuilder.build();
+
+            if (client.cache() != null) {
                 gb.withConnector(new ForceValidationOkHttpConnector(new OkUrlFactory(client)));
             } else {
-                gb.withConnector(new OkHttpConnector(new OkUrlFactory(client)));
+                gb.withConnector(new OkHttp3Connector(new OkUrlFactory(client)));
             }
 
             if (username != null) {
@@ -735,13 +741,13 @@ public class Connector {
                 .build()
                 .toString();
         private static final String HEADER_NAME = "Cache-Control";
-        private final OkHttpConnector delegate;
+        private final OkHttp3Connector delegate;
 
         public ForceValidationOkHttpConnector(OkUrlFactory okUrlFactory) {
-            this.delegate = new OkHttpConnector(okUrlFactory);
+            this.delegate = new OkHttp3Connector(okUrlFactory);
         }
 
-        /*package*/ OkHttpConnector getDelegate() {
+        /*package*/ HttpConnector getDelegate() {
             return delegate;
         }
 
