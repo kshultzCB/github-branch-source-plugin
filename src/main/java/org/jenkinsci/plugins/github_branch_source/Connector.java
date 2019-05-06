@@ -403,9 +403,9 @@ public class Connector {
             OkHttpClient client = clientBuilder.build();
 
             if (client.cache() != null) {
-                gb.withConnector(new ForceValidationOkHttpConnector(new OkUrlFactory(client)));
+                gb.withConnector(new ForceValidationOkHttpConnector(client));
             } else {
-                gb.withConnector(new OkHttp3Connector(new OkUrlFactory(client)));
+                gb.withConnector(new OkHttp3Connector(client));
             }
 
             if (username != null) {
@@ -743,8 +743,8 @@ public class Connector {
         private static final String HEADER_NAME = "Cache-Control";
         private final OkHttp3Connector delegate;
 
-        public ForceValidationOkHttpConnector(OkUrlFactory okUrlFactory) {
-            this.delegate = new OkHttp3Connector(okUrlFactory);
+        public ForceValidationOkHttpConnector(OkHttpClient client) {
+            this.delegate = new OkHttp3Connector(client);
         }
 
         /*package*/ HttpConnector getDelegate() {
