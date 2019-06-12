@@ -55,8 +55,15 @@ public class PullRequestSCMRevision extends ChangeRequestSCMRevision<PullRequest
     public PullRequestSCMRevision(@NonNull PullRequestSCMHead head, @NonNull String baseHash, @NonNull String pullHash) {
         this(head, baseHash, pullHash, null);
     }
-    // Why is this one not public but the one above it is
-    // PullRequestSCMRevision(@NonNull PullRequestSCMHead head, @NonNull String baseHash, @NonNull String pullHash, String mergeHash) {
+    /* TODO see if there's a less invasive way of getting this to work in the JMH test.
+    *
+    * Formerly this was package private. To get it to work with the version of
+    * SCMFileSystemTest that I dropped into src/test/java/jmh/benchmarks, I needed
+    * to make it public. Probably need to do that differently, but reflection is a
+    * PITA, and brings performance slowdowns along with it. Which is sort of not what
+    * we want in...a performance test.
+    * PullRequestSCMRevision(@NonNull PullRequestSCMHead head, @NonNull String baseHash, @NonNull String pullHash, String mergeHash) {
+    */
     public PullRequestSCMRevision(@NonNull PullRequestSCMHead head, @NonNull String baseHash, @NonNull String pullHash, String mergeHash) {
         super(head, new AbstractGitSCMSource.SCMRevisionImpl(head.getTarget(), baseHash));
         this.baseHash = baseHash;
