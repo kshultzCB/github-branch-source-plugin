@@ -55,8 +55,9 @@ public class PullRequestSCMRevision extends ChangeRequestSCMRevision<PullRequest
     public PullRequestSCMRevision(@NonNull PullRequestSCMHead head, @NonNull String baseHash, @NonNull String pullHash) {
         this(head, baseHash, pullHash, null);
     }
-
-    PullRequestSCMRevision(@NonNull PullRequestSCMHead head, @NonNull String baseHash, @NonNull String pullHash, String mergeHash) {
+    // Why is this one not public but the one above it is
+    // PullRequestSCMRevision(@NonNull PullRequestSCMHead head, @NonNull String baseHash, @NonNull String pullHash, String mergeHash) {
+    public PullRequestSCMRevision(@NonNull PullRequestSCMHead head, @NonNull String baseHash, @NonNull String pullHash, String mergeHash) {
         super(head, new AbstractGitSCMSource.SCMRevisionImpl(head.getTarget(), baseHash));
         this.baseHash = baseHash;
         this.pullHash = pullHash;
