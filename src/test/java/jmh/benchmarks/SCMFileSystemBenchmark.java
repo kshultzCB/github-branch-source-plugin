@@ -30,6 +30,13 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.Level;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
+import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
+import org.openjdk.jmh.infra.Blackhole;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
@@ -44,7 +51,9 @@ import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeThat;
 
 @RunWith(Parameterized.class)
+// @State(Scope.Benchmark)
 public class SCMFileSystemBenchmark {
+    @State(Scope.Benchmark)
     /**
      * All tests in this class only use Jenkins for the extensions
      */
@@ -163,7 +172,8 @@ public class SCMFileSystemBenchmark {
         source = new GitHubSCMSource(null, "http://localhost:" + githubApi.port(), GitHubSCMSource.DescriptorImpl.SAME, null, "cloudbeers", "yolo");
     }
 
-    @Test
+    // @Test
+    @Benchmark
     public void haveFilesystem() throws Exception {
         assertThat(SCMFileSystem.of(source, master, revision), notNullValue());
     }
