@@ -26,6 +26,8 @@
         <java.level>8</java.level>
         <jenkins.version>2.138.4</jenkins.version>
         <scm-api.version>2.6.3</scm-api.version>
+        <okhttp3.version>3.12.2</okhttp3.version>
+        <okio.version>2.2.2</okio.version>
         <useBeta>true</useBeta>
     </properties>
 
@@ -71,6 +73,22 @@
             <artifactId>display-url-api</artifactId>
             <version>2.0</version>
         </dependency>
+        <dependency>
+            <groupId>com.squareup.okio</groupId>
+            <artifactId>okio</artifactId>
+            <version>${okio.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>${okhttp3.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp-urlconnection</artifactId>
+            <version>${okhttp3.version}</version>
+        </dependency>
+
         <!-- Currently just here for interactive testing via hpi:run: -->
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -227,6 +245,11 @@
                 </executions>
                 <configuration>
                     <compatibleSinceVersion>2.2.0</compatibleSinceVersion>
+                    <!-- <pluginFirstClassLoader>true</pluginFirstClassLoader> -->
+                    <maskClasses>
+                        okhttp3.
+                        okio.
+                    </maskClasses>
                 </configuration>
             </plugin>
         </plugins>
