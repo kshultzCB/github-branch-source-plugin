@@ -21,13 +21,14 @@
     </licenses>
 
     <properties>
-        <revision>2.5.4</revision>
+        <revision>2.5.7</revision>
         <changelist>-SNAPSHOT</changelist>
         <java.level>8</java.level>
         <jenkins.version>2.138.4</jenkins.version>
-        <scm-api.version>2.3.0</scm-api.version>
+        <scm-api.version>2.6.3</scm-api.version>
         <okhttp3.version>3.12.2</okhttp3.version>
         <okio.version>2.2.2</okio.version>
+        <useBeta>true</useBeta>
     </properties>
 
     <scm>
@@ -40,7 +41,7 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>structs</artifactId>
-            <version>1.17</version>
+            <version>1.19</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -87,7 +88,6 @@
             <artifactId>okhttp-urlconnection</artifactId>
             <version>${okhttp3.version}</version>
         </dependency>
-
 
         <!-- Currently just here for interactive testing via hpi:run: -->
         <dependency>

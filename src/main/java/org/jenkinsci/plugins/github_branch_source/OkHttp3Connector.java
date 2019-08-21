@@ -46,5 +46,4 @@ public class OkHttp3Connector implements HttpConnector {
     private List<ConnectionSpec> TlsConnectionSpecs() {
         return Arrays.asList(ConnectionSpec.MODERN_TLS, ConnectionSpec.CLEARTEXT);
     }
-
 }
