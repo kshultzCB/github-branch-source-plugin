@@ -88,7 +88,6 @@ import org.kohsuke.github.RateLimitHandler;
 import org.kohsuke.github.extras.OkHttpConnector;
 import org.jenkinsci.plugins.github_branch_source.OkHttp3Connector;
 
-
 import static java.util.logging.Level.FINE;
 
 /**
