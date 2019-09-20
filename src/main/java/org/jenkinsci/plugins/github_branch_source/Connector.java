@@ -733,6 +733,13 @@ public class Connector {
     /**
      * A {@link HttpConnector} that uses {@link OkHttpConnector} but starts with the {@code Cache-Control} header
      * configured to always revalidate requests against the remote server using conditional GET requests.
+     *
+     * By default OkHttp honors max-age, meaning it will use local cache
+     * without checking the network within that time frame.
+     * However, that can result in stale data being returned during that time so
+     * this class will force network-based revalidation no matter how often the query is made.
+     * OkHttp still automatically does ETag checking and returns cached data when
+     * GitHub reports 304, but those do not count against rate limit.
      */
     @Restricted(NoExternalUse.class)
     /*package*/ static class ForceValidationOkHttpConnector implements HttpConnector {
