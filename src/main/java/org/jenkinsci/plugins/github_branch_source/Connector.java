@@ -146,7 +146,7 @@ public class Connector {
                 .includeEmptyValue()
                 .includeMatchingAs(
                         context instanceof Queue.Task
-                                ? Tasks.getDefaultAuthenticationOf((Queue.Task) context)
+                                ? ((Queue.Task) context).getDefaultAuthentication()
                                 : ACL.SYSTEM,
                         context,
                         StandardUsernameCredentials.class,
@@ -178,7 +178,7 @@ public class Connector {
      * @return the {@link FormValidation} results.
      */
     public static FormValidation checkScanCredentials(@CheckForNull Item context, String apiUri, String scanCredentialsId) {
-        if (context == null && !Jenkins.getActiveInstance().hasPermission(Jenkins.ADMINISTER) ||
+        if (context == null && !Jenkins.get().hasPermission(Jenkins.ADMINISTER) ||
                 context != null && !context.hasPermission(Item.EXTENDED_READ)) {
             return FormValidation.ok();
         }
@@ -262,7 +262,7 @@ public class Connector {
                     StandardUsernameCredentials.class,
                     context,
                     context instanceof Queue.Task
-                            ? Tasks.getDefaultAuthenticationOf((Queue.Task) context)
+                            ? ((Queue.Task) context).getDefaultAuthentication()
                             : ACL.SYSTEM,
                     githubDomainRequirements(apiUri)
                 ),
@@ -300,7 +300,7 @@ public class Connector {
         result.add("- anonymous -", GitHubSCMSource.DescriptorImpl.ANONYMOUS);
         return result.includeMatchingAs(
                 context instanceof Queue.Task
-                        ? Tasks.getDefaultAuthenticationOf((Queue.Task) context)
+                        ? ((Queue.Task) context).getDefaultAuthentication()
                         : ACL.SYSTEM,
                 context,
                 StandardUsernameCredentials.class,
@@ -401,9 +401,11 @@ public class Connector {
             }
 
             OkHttpClient client = clientBuilder.build();
-
             if (client.cache() != null) {
-                gb.withConnector(new ForceValidationOkHttpConnector(client));
+                OkHttpClient.Builder noCacheBuilder = baseClient.newBuilder();
+                noCache.proxy(getProxy(host));
+                OkHttpClient clientNoCache = noCacheBuilder.build();
+                gb.withConnector(new ForceValidationOkHttpConnector(client, clientNoCache));
             } else {
                 gb.withConnector(new OkHttp3Connector(client));
             }
@@ -731,36 +733,32 @@ public class Connector {
     }
 
     /**
-     * A {@link HttpConnector} that uses {@link OkHttpConnector} but starts with the {@code Cache-Control} header
-     * configured to always revalidate requests against the remote server using conditional GET requests.
-     *
-     * By default OkHttp honors max-age, meaning it will use local cache
-     * without checking the network within that time frame.
-     * However, that can result in stale data being returned during that time so
-     * this class will force network-based revalidation no matter how often the query is made.
-     * OkHttp still automatically does ETag checking and returns cached data when
-     * GitHub reports 304, but those do not count against rate limit.
+     * A {@link HttpConnector} that uses {@link OkHttpConnector} when caching is enabled.
+     * Starts with the {@code Cache-Control} header configured to always revalidate requests
+     * against the remote server using conditional GET requests.
+     * Allows Jenkins to fallback to uncached query if requests fail due to flaky caching.
      */
     @Restricted(NoExternalUse.class)
-    /*package*/ static class ForceValidationOkHttpConnector implements HttpConnector {
+    /*package*/ static class ForceValidationOkHttpConnector extends OkHttp3Connector {
         private static final String FORCE_VALIDATION = new CacheControl.Builder()
                 .maxAge(0, TimeUnit.SECONDS)
                 .build()
                 .toString();
         private static final String HEADER_NAME = "Cache-Control";
-        private final OkHttp3Connector delegate;
+        private final OkHttp3Connector uncachedConnector;
 
-        public ForceValidationOkHttpConnector(OkHttpClient client) {
-            this.delegate = new OkHttp3Connector(client);
+        public ForceValidationOkHttpConnector(OkHttpClient client, OkHttpClient uncachedClient) {
+            super(client);
+            this.uncachedConnector = new OkHttp3Connector(uncachedClient);
         }
 
-        /*package*/ HttpConnector getDelegate() {
-            return delegate;
+        /*package*/ HttpConnector getUncachedConnector() {
+            return uncachedConnector;
         }
 
         @Override
         public HttpURLConnection connect(URL url) throws IOException {
-            HttpURLConnection connection = delegate.connect(url);
+            HttpURLConnection connection = super.connect(url);
             connection.setRequestProperty(HEADER_NAME, FORCE_VALIDATION);
             return connection;
         }
