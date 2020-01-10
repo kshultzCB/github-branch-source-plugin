@@ -403,7 +403,7 @@ public class Connector {
             OkHttpClient client = clientBuilder.build();
             if (client.cache() != null) {
                 OkHttpClient.Builder noCacheBuilder = baseClient.newBuilder();
-                noCache.proxy(getProxy(host));
+                noCacheBuilder.proxy(getProxy(host));
                 OkHttpClient clientNoCache = noCacheBuilder.build();
                 gb.withConnector(new ForceValidationOkHttpConnector(client, clientNoCache));
             } else {
