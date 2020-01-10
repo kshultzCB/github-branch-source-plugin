@@ -35,10 +35,10 @@ import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
-import com.squareup.okhttp.Cache;
-import com.squareup.okhttp.CacheControl;
-import com.squareup.okhttp.OkHttpClient;
-import com.squareup.okhttp.OkUrlFactory;
+import okhttp3.Cache;
+import okhttp3.CacheControl;
+import okhttp3.OkHttpClient;
+import okhttp3.OkUrlFactory;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.AbortException;
 import hudson.Extension;
@@ -86,6 +86,7 @@ import org.kohsuke.github.GitHubBuilder;
 import org.kohsuke.github.HttpConnector;
 import org.kohsuke.github.RateLimitHandler;
 import org.kohsuke.github.extras.OkHttpConnector;
+import org.jenkinsci.plugins.github_branch_source.OkHttp3Connector;
 
 import static java.util.logging.Level.FINE;
 
@@ -110,6 +111,8 @@ public class Connector {
     private static final double MILLIS_PER_HOUR = TimeUnit.HOURS.toMillis(1);
     private static final Random ENTROPY = new Random();
     private static final String SALT = Long.toHexString(ENTROPY.nextLong());
+    private static final OkHttpClient baseClient = new OkHttpClient();
+
 
     private Connector() {
         throw new IllegalAccessError("Utility class");
@@ -370,7 +373,8 @@ public class Connector {
             gb.withEndpoint(apiUrl);
             gb.withRateLimitHandler(CUSTOMIZED);
 
-            OkHttpClient client = new OkHttpClient().setProxy(getProxy(host));
+            OkHttpClient.Builder clientBuilder = baseClient.newBuilder();
+            clientBuilder.proxy(getProxy(host));
 
             int cacheSize = GitHubSCMSource.getCacheSize();
             if (cacheSize > 0) {
@@ -392,15 +396,16 @@ public class Connector {
                 }
                 if (cacheDir != null) {
                     Cache cache = new Cache(cacheDir, cacheSize * 1024L * 1024L);
-                    client.setCache(cache);
+                    clientBuilder.cache(cache);
                 }
             }
 
-            if (client.getCache() != null) {
-                OkHttpClient clientNoCache = new OkHttpClient().setProxy(getProxy(host));
-                gb.withConnector(new ForceValidationOkHttpConnector(client, clientNoCache));
+            OkHttpClient client = clientBuilder.build();
+
+            if (client.cache() != null) {
+                gb.withConnector(new ForceValidationOkHttpConnector(client));
             } else {
-                gb.withConnector(new OkHttpConnector(new OkUrlFactory(client)));
+                gb.withConnector(new OkHttp3Connector(client));
             }
 
             if (username != null) {
@@ -726,26 +731,31 @@ public class Connector {
     }
 
     /**
-     * A {@link HttpConnector} that uses {@link OkHttpConnector} when caching is enabled.
-     * Starts with the {@code Cache-Control} header configured to always revalidate requests
-     * against the remote server using conditional GET requests.
-     * Allows Jenkins to fallback to uncached query if requests fail due to flaky caching.
+     * A {@link HttpConnector} that uses {@link OkHttpConnector} but starts with the {@code Cache-Control} header
+     * configured to always revalidate requests against the remote server using conditional GET requests.
+     *
+     * By default OkHttp honors max-age, meaning it will use local cache
+     * without checking the network within that time frame.
+     * However, that can result in stale data being returned during that time so
+     * this class will force network-based revalidation no matter how often the query is made.
+     * OkHttp still automatically does ETag checking and returns cached data when
+     * GitHub reports 304, but those do not count against rate limit.
      */
     @Restricted(NoExternalUse.class)
-    /*package*/ static class ForceValidationOkHttpConnector extends OkHttpConnector {
+    /*package*/ static class ForceValidationOkHttpConnector extends OkHttp3Connector {
         private static final String FORCE_VALIDATION = new CacheControl.Builder()
                 .maxAge(0, TimeUnit.SECONDS)
                 .build()
                 .toString();
         private static final String HEADER_NAME = "Cache-Control";
-        private final OkHttpConnector uncachedConnector;
+        private final OkHttp3Connector uncachedConnector;
 
-        public ForceValidationOkHttpConnector(OkHttpClient client, OkHttpClient uncachedClient) {
-            super(new OkUrlFactory(client));
-            this.uncachedConnector = new OkHttpConnector(new OkUrlFactory(uncachedClient));
+        public ForceValidationOkHttpConnector(OkHttpClient client) {
+            super(new OkHttpClient());
+            this.uncachedConnector = new OkHttp3Connector(client);
         }
 
-        /*package*/ OkHttpConnector getUncachedConnector() {
+        /*package*/ OkHttp3Connector getUncachedConnector() {
             return uncachedConnector;
         }
 
